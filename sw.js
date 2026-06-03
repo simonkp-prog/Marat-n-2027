@@ -1,4 +1,4 @@
-const CACHE = 'maraton-2027-v1';
+const CACHE = 'maraton-2027-v4';
 const ASSETS = [
   '/Marat-n-2027/entrenamiento-maraton.html',
   '/Marat-n-2027/manifest.json',
