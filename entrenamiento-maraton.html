@@ -194,8 +194,13 @@
         </div>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
-      <div class="modal-workout" id="modalWorkout"></div>
-      <div class="modal-km-plan" id="modalKmPlan"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <input type="number" id="modalPlanKm" min="0.5" max="100" step="0.5"
+          style="width:72px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--accent);padding:8px 10px;font-size:1rem;font-weight:700;outline:none;text-align:center;">
+        <span style="color:var(--muted);font-size:0.85rem;flex-shrink:0">km ·</span>
+        <input type="text" id="modalPlanDesc"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:0.85rem;outline:none;font-family:inherit;">
+      </div>
     </div>
     <div class="modal-body">
       <div>
@@ -205,17 +210,6 @@
           <button class="status-btn" data-status="partial" onclick="modalSetStatus('partial')">◑ Parcial</button>
           <button class="status-btn" data-status="skipped" onclick="modalSetStatus('skipped')">✗ Salteado</button>
           <button class="status-btn" data-status="pending" onclick="modalSetStatus('pending')">○ Pendiente</button>
-        </div>
-      </div>
-      <div>
-        <div class="modal-section-label">Distancia planificada</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <div class="km-input-row" style="flex:0 0 auto">
-            <input type="number" id="modalPlanKm" min="0.5" max="100" step="0.5" placeholder="0">
-            <span>km</span>
-          </div>
-          <input type="text" id="modalPlanDesc" placeholder="Descripción del entreno"
-            style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:0.85rem;outline:none;font-family:inherit;">
         </div>
       </div>
       <div>
@@ -643,8 +637,6 @@ function openModal(wi, di) {
 
   document.getElementById('modalDayLabel').textContent = DAYS_ES[di] + ' · Semana ' + WEEKS[wi].n;
   document.getElementById('modalDayDate').textContent = formatDayDate(wi, di);
-  document.getElementById('modalWorkout').textContent = d.desc;
-  document.getElementById('modalKmPlan').textContent = d.km + ' km planificados';
   document.getElementById('modalKmInput').value = getActual(wi, di) ?? '';
   document.getElementById('modalKmInput').placeholder = d.km;
   document.getElementById('modalPlanKm').value = d.km;
