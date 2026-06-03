@@ -153,6 +153,8 @@
   .btn-save:hover { opacity: 0.85; }
   .btn-cancel { padding: 12px 18px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
   .btn-cancel:hover { color: var(--text); }
+  .btn-rest { padding: 12px 14px; background: transparent; color: var(--red); border: 1px solid var(--red)44; border-radius: 8px; font-size: 0.82rem; cursor: pointer; transition: all 0.15s; }
+  .btn-rest:hover { background: var(--red)11; border-color: var(--red)88; }
 
   @media (max-width: 600px) {
     .days-grid { grid-template-columns: 1fr 1fr; }
@@ -219,7 +221,40 @@
     </div>
     <div class="modal-footer">
       <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-rest" id="btnRest" onclick="confirmDeleteWorkout()" title="Quitar este entreno y dejarlo como día de descanso">🛌 Dejar como descanso</button>
       <button class="btn-save" onclick="saveModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal agregar entreno a día de descanso -->
+<div class="modal-overlay" id="modalRestOverlay" onclick="handleRestOverlayClick(event)">
+  <div class="modal" id="modalRest">
+    <div class="modal-header">
+      <div class="modal-header-top">
+        <div>
+          <div class="modal-day-label" id="modalRestLabel"></div>
+          <div class="modal-day-date" id="modalRestDate"></div>
+        </div>
+        <button class="modal-close" onclick="closeModalRest()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="modal-section-label">Kilómetros a correr</div>
+        <div class="km-input-row">
+          <input type="number" id="restKmInput" min="0.5" max="100" step="0.5" placeholder="0">
+          <span>km</span>
+        </div>
+      </div>
+      <div>
+        <div class="modal-section-label">Descripción del entreno</div>
+        <input type="text" id="restDescInput" placeholder="Ej: 8 km paso ligero" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-size:0.9rem;outline:none;font-family:inherit;">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModalRest()">Cancelar</button>
+      <button class="btn-save" onclick="saveModalRest()">Agregar entreno</button>
     </div>
   </div>
 </div>
@@ -314,13 +349,36 @@ let openWeeks = new Set();
 
 function dayKey(wi, di) { return `w${wi}_d${di}`; }
 
+// Devuelve los datos efectivos del día (considera overrides del usuario)
+function getDayData(wi, di) {
+  const s = state[dayKey(wi, di)];
+  if (s?.deleted) return null;                          // entrenamiento borrado → descanso
+  if (s?.customKm) return { km: s.customKm, desc: s.customDesc || (s.customKm + ' km') }; // descanso con entreno agregado
+  return WEEKS[wi].days[di];                            // dato original
+}
+
 function getStatus(wi, di) { return state[dayKey(wi,di)]?.status || 'pending'; }
 function getActual(wi, di) { return state[dayKey(wi,di)]?.actual ?? null; }
 function getNotes(wi, di)  { return state[dayKey(wi,di)]?.notes ?? ''; }
 
 function saveDay(wi, di, status, actual, notes) {
   const k = dayKey(wi, di);
-  state[k] = { status, actual: actual || null, notes: notes || '' };
+  const prev = state[k] || {};
+  state[k] = { ...prev, status, actual: actual || null, notes: notes || '' };
+  saveState(state);
+  render();
+}
+
+function saveCustomWorkout(wi, di, km, desc) {
+  const k = dayKey(wi, di);
+  state[k] = { ...state[k], customKm: km, customDesc: desc, deleted: false, status: 'pending', actual: null, notes: '' };
+  saveState(state);
+  render();
+}
+
+function deleteWorkout(wi, di) {
+  const k = dayKey(wi, di);
+  state[k] = { deleted: true };
   saveState(state);
   render();
 }
@@ -350,14 +408,15 @@ function stageStats(si) {
   const s = STAGES[si];
   let planKm = 0, doneKm = 0, plannedDays = 0, doneDays = 0, skippedDays = 0;
   for (let wi = s.weeks[0]; wi <= s.weeks[1]; wi++) {
-    WEEKS[wi].days.forEach((d, di) => {
+    WEEKS[wi].days.forEach((_, di) => {
+      const d = getDayData(wi, di);
       if (!d) return;
       planKm += d.km;
       plannedDays++;
       const st = getStatus(wi, di);
       const actual = getActual(wi, di);
-      if (st === 'done')    { doneDays++;  doneKm += actual ?? d.km; }
-      else if (st === 'partial') { doneDays++;  doneKm += actual ?? d.km * 0.5; }
+      if (st === 'done')         { doneDays++; doneKm += actual ?? d.km; }
+      else if (st === 'partial') { doneDays++; doneKm += actual ?? d.km * 0.5; }
       else if (st === 'skipped') skippedDays++;
     });
   }
@@ -366,13 +425,14 @@ function stageStats(si) {
 
 function totalStats() {
   let planKm = 0, doneKm = 0, doneDays = 0;
-  WEEKS.forEach((w, wi) => {
-    w.days.forEach((d, di) => {
+  WEEKS.forEach((_, wi) => {
+    WEEKS[wi].days.forEach((__, di) => {
+      const d = getDayData(wi, di);
       if (!d) return;
       planKm += d.km;
       const st = getStatus(wi, di);
       const actual = getActual(wi, di);
-      if (st === 'done')    { doneDays++; doneKm += actual ?? d.km; }
+      if (st === 'done')         { doneDays++; doneKm += actual ?? d.km; }
       else if (st === 'partial') { doneDays++; doneKm += actual ?? d.km * 0.5; }
     });
   });
@@ -480,7 +540,8 @@ function renderWeeks() {
 
     // compute week stats
     let planKm = 0, doneKm = 0;
-    const dots = w.days.map((d, di) => {
+    const dots = w.days.map((_, di) => {
+      const d = getDayData(wi, di);
       if (!d) return 'rest';
       planKm += d.km;
       const st = getStatus(wi, di);
@@ -510,13 +571,17 @@ function renderDaysGrid(wi) {
   const icons  = { pending:'○', done:'✓', skipped:'✗', partial:'◑' };
   const colors = { done:'var(--green)', skipped:'var(--red)', partial:'var(--yellow)', pending:'var(--muted)' };
 
-  const cards = w.days.map((d, di) => {
+  const cards = w.days.map((_, di) => {
+    const d = getDayData(wi, di);
     const dateShort = formatDayDateShort(wi, di);
+    const isCustom = !!state[dayKey(wi,di)]?.customKm;
+
     if (!d) return `
-      <div class="day-card rest">
+      <div class="day-card rest" onclick="openModalRest(${wi},${di})" title="Click para agregar entreno">
         <div class="day-name">${DAYS_ES[di]}</div>
         <div class="day-date">${dateShort}</div>
         <div class="day-workout" style="color:var(--muted);font-size:0.75rem">Descanso</div>
+        <div style="font-size:0.68rem;color:var(--accent);margin-top:6px;opacity:0.7">+ Agregar entreno</div>
       </div>`;
     const st = getStatus(wi, di);
     const actual = getActual(wi, di);
@@ -524,7 +589,7 @@ function renderDaysGrid(wi) {
     return `
       <div class="day-card ${st} ${d.race?'race':''}" onclick="openModal(${wi},${di})">
         <div class="day-status-badge" style="color:${colors[st]}">${icons[st]}</div>
-        <div class="day-name">${DAYS_ES[di]}</div>
+        <div class="day-name">${DAYS_ES[di]}${isCustom ? ' <span style="font-size:0.6rem;color:var(--accent);background:var(--accent)22;border-radius:3px;padding:1px 4px">editado</span>' : ''}</div>
         <div class="day-date">${dateShort}</div>
         <div class="day-workout">${d.desc}</div>
         <div class="day-km">${d.km} km planif.${actual != null ? ` · <span style="color:var(--text)">${actual} km reales</span>` : ''}</div>
@@ -554,11 +619,16 @@ function toggleWeek(wi) {
 let modalWi = null, modalDi = null, modalStatus = 'pending';
 
 function openModal(wi, di) {
-  const d = WEEKS[wi].days[di];
+  const d = getDayData(wi, di);
   if (!d) return;
 
   modalWi = wi; modalDi = di;
   modalStatus = getStatus(wi, di);
+
+  // Mostrar "dejar como descanso" solo si el día tiene entreno (original o custom)
+  // Ocultarlo si es un día de carrera
+  const btnRest = document.getElementById('btnRest');
+  btnRest.style.display = d.race ? 'none' : 'inline-block';
 
   document.getElementById('modalDayLabel').textContent = DAYS_ES[di] + ' · Semana ' + WEEKS[wi].n;
   document.getElementById('modalDayDate').textContent = formatDayDate(wi, di);
@@ -603,7 +673,47 @@ function saveModal() {
   closeModal();
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+function confirmDeleteWorkout() {
+  if (!confirm('¿Dejar este día como descanso?')) return;
+  deleteWorkout(modalWi, modalDi);
+  closeModal();
+}
+
+// ── MODAL DESCANSO ────────────────────────────────────────────────────────────
+let restWi = null, restDi = null;
+
+function openModalRest(wi, di) {
+  restWi = wi; restDi = di;
+  document.getElementById('modalRestLabel').textContent = DAYS_ES[di] + ' · Semana ' + WEEKS[wi].n;
+  document.getElementById('modalRestDate').textContent = formatDayDate(wi, di);
+  document.getElementById('restKmInput').value = '';
+  document.getElementById('restDescInput').value = '';
+  document.getElementById('modalRestOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('restKmInput').focus(), 150);
+}
+
+function closeModalRest() {
+  document.getElementById('modalRestOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  restWi = null; restDi = null;
+}
+
+function handleRestOverlayClick(e) {
+  if (e.target === document.getElementById('modalRestOverlay')) closeModalRest();
+}
+
+function saveModalRest() {
+  const km = parseFloat(document.getElementById('restKmInput').value);
+  if (!km || km <= 0) { document.getElementById('restKmInput').focus(); return; }
+  const desc = document.getElementById('restDescInput').value.trim() || `${km} km`;
+  saveCustomWorkout(restWi, restDi, km, desc);
+  closeModalRest();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeModalRest(); }
+});
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // Find current stage
