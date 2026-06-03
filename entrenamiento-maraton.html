@@ -111,6 +111,43 @@
 
   .no-plan-badge { display: inline-block; background: var(--yellow)22; color: var(--yellow); border: 1px solid var(--yellow)44; border-radius: 4px; font-size: 0.7rem; padding: 2px 6px; margin-left: 8px; }
 
+  /* Day date */
+  .day-date { font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: #000000bb; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 440px; overflow: hidden; transform: translateY(16px); transition: transform 0.2s; }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-header { padding: 20px 20px 16px; border-bottom: 1px solid var(--border); }
+  .modal-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .modal-day-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+  .modal-day-date { font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; line-height: 1; padding: 0; flex-shrink: 0; }
+  .modal-close:hover { color: var(--text); }
+  .modal-workout { margin-top: 12px; font-size: 0.88rem; color: var(--text); line-height: 1.5; background: var(--surface2); border-radius: 8px; padding: 10px 12px; }
+  .modal-km-plan { font-size: 0.75rem; color: var(--accent); margin-top: 6px; font-weight: 600; }
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+  .modal-section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+  .status-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .status-btn { padding: 10px 8px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface2); color: var(--muted); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .status-btn:hover { border-color: var(--border); color: var(--text); }
+  .status-btn.active-done   { border-color: var(--green);  background: #16332466; color: var(--green); }
+  .status-btn.active-partial{ border-color: var(--yellow); background: #2e210066; color: var(--yellow); }
+  .status-btn.active-skipped{ border-color: var(--red);    background: #3a1a1a66; color: var(--red); }
+  .status-btn.active-pending{ border-color: var(--muted);  background: var(--surface2); color: var(--muted); }
+  .km-input-row { display: flex; align-items: center; gap: 10px; }
+  .km-input-row input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 10px 12px; font-size: 0.95rem; outline: none; }
+  .km-input-row input:focus { border-color: var(--accent); }
+  .km-input-row span { font-size: 0.85rem; color: var(--muted); }
+  .notes-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 10px 12px; font-size: 0.85rem; resize: vertical; min-height: 72px; font-family: inherit; outline: none; }
+  .notes-input:focus { border-color: var(--accent); }
+  .modal-footer { padding: 0 20px 20px; display: flex; gap: 10px; }
+  .btn-save { flex: 1; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+  .btn-save:hover { opacity: 0.85; }
+  .btn-cancel { padding: 12px 18px; background: var(--surface2); color: var(--muted); border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
+  .btn-cancel:hover { color: var(--text); }
+
   @media (max-width: 600px) {
     .days-grid { grid-template-columns: 1fr 1fr; }
     .week-date { display: none; }
@@ -137,6 +174,49 @@
   <div class="stage-card" id="stageCard"></div>
   <div class="week-list" id="weekList"></div>
 </main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-header-top">
+        <div>
+          <div class="modal-day-label" id="modalDayLabel"></div>
+          <div class="modal-day-date" id="modalDayDate"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-workout" id="modalWorkout"></div>
+      <div class="modal-km-plan" id="modalKmPlan"></div>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="modal-section-label">¿Cómo fue el entreno?</div>
+        <div class="status-btns">
+          <button class="status-btn" data-status="done"    onclick="modalSetStatus('done')">✓ Completado</button>
+          <button class="status-btn" data-status="partial" onclick="modalSetStatus('partial')">◑ Parcial</button>
+          <button class="status-btn" data-status="skipped" onclick="modalSetStatus('skipped')">✗ Salteado</button>
+          <button class="status-btn" data-status="pending" onclick="modalSetStatus('pending')">○ Pendiente</button>
+        </div>
+      </div>
+      <div>
+        <div class="modal-section-label">Kilómetros reales corridos</div>
+        <div class="km-input-row">
+          <input type="number" id="modalKmInput" min="0" max="100" step="0.5" placeholder="0">
+          <span>km</span>
+        </div>
+      </div>
+      <div>
+        <div class="modal-section-label">Notas (opcional)</div>
+        <textarea class="notes-input" id="modalNotes" placeholder="Cómo te sentiste, condiciones, tiempos..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveModal()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
@@ -230,27 +310,31 @@ function dayKey(wi, di) { return `w${wi}_d${di}`; }
 
 function getStatus(wi, di) { return state[dayKey(wi,di)]?.status || 'pending'; }
 function getActual(wi, di) { return state[dayKey(wi,di)]?.actual ?? null; }
+function getNotes(wi, di)  { return state[dayKey(wi,di)]?.notes ?? ''; }
 
-function setStatus(wi, di, status) {
-  const k = dayKey(wi,di);
-  state[k] = { ...state[k], status };
+function saveDay(wi, di, status, actual, notes) {
+  const k = dayKey(wi, di);
+  state[k] = { status, actual: actual || null, notes: notes || '' };
   saveState(state);
   render();
 }
-function setActual(wi, di, val) {
-  const k = dayKey(wi,di);
-  state[k] = { ...state[k], actual: val };
-  saveState(state);
-  updateHeaderStats();
-}
-
-function cycleStatus(wi, di) {
-  const cur = getStatus(wi, di);
-  const next = { pending:'done', done:'skipped', skipped:'partial', partial:'pending' };
-  setStatus(wi, di, next[cur]);
-}
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
+function dayDate(wi, di) {
+  // week date is the Monday (di=0); di=0→Mon, 1→Tue, ... 6→Sun
+  const d = new Date(WEEKS[wi].date + 'T12:00:00');
+  d.setDate(d.getDate() + di);
+  return d;
+}
+
+function formatDayDate(wi, di) {
+  return dayDate(wi, di).toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+}
+
+function formatDayDateShort(wi, di) {
+  return dayDate(wi, di).toLocaleDateString('es-CL', { day:'numeric', month:'short' });
+}
+
 function stageOf(wi) {
   for (const s of STAGES) if (wi >= s.weeks[0] && wi <= s.weeks[1]) return STAGES.indexOf(s);
   return 0;
@@ -265,8 +349,9 @@ function stageStats(si) {
       planKm += d.km;
       plannedDays++;
       const st = getStatus(wi, di);
-      if (st === 'done') { doneDays++; doneKm += getActual(wi, di) ?? d.km; }
-      else if (st === 'partial') { doneDays++; doneKm += getActual(wi, di) ?? d.km * 0.5; }
+      const actual = getActual(wi, di);
+      if (st === 'done')    { doneDays++;  doneKm += actual ?? d.km; }
+      else if (st === 'partial') { doneDays++;  doneKm += actual ?? d.km * 0.5; }
       else if (st === 'skipped') skippedDays++;
     });
   }
@@ -280,8 +365,9 @@ function totalStats() {
       if (!d) return;
       planKm += d.km;
       const st = getStatus(wi, di);
-      if (st === 'done') { doneDays++; doneKm += getActual(wi, di) ?? d.km; }
-      else if (st === 'partial') { doneDays++; doneKm += getActual(wi, di) ?? d.km * 0.5; }
+      const actual = getActual(wi, di);
+      if (st === 'done')    { doneDays++; doneKm += actual ?? d.km; }
+      else if (st === 'partial') { doneDays++; doneKm += actual ?? d.km * 0.5; }
     });
   });
   return { planKm, doneKm, doneDays };
@@ -415,27 +501,28 @@ function renderWeeks() {
 
 function renderDaysGrid(wi) {
   const w = WEEKS[wi];
+  const icons  = { pending:'○', done:'✓', skipped:'✗', partial:'◑' };
+  const colors = { done:'var(--green)', skipped:'var(--red)', partial:'var(--yellow)', pending:'var(--muted)' };
+
   const cards = w.days.map((d, di) => {
-    if (!d) return `<div class="day-card rest"><div class="day-name">${DAYS_ES[di]}</div><div class="day-workout" style="color:var(--muted);font-size:0.75rem">Descanso</div></div>`;
+    const dateShort = formatDayDateShort(wi, di);
+    if (!d) return `
+      <div class="day-card rest">
+        <div class="day-name">${DAYS_ES[di]}</div>
+        <div class="day-date">${dateShort}</div>
+        <div class="day-workout" style="color:var(--muted);font-size:0.75rem">Descanso</div>
+      </div>`;
     const st = getStatus(wi, di);
     const actual = getActual(wi, di);
-    const icons = { pending:'○', done:'✓', skipped:'✗', partial:'◑' };
-    const colors = { done:'var(--green)', skipped:'var(--red)', partial:'var(--yellow)', pending:'var(--muted)' };
+    const notes  = getNotes(wi, di);
     return `
-      <div class="day-card ${st} ${d.race?'race':''}" onclick="handleDayClick(event,${wi},${di})">
+      <div class="day-card ${st} ${d.race?'race':''}" onclick="openModal(${wi},${di})">
         <div class="day-status-badge" style="color:${colors[st]}">${icons[st]}</div>
         <div class="day-name">${DAYS_ES[di]}</div>
+        <div class="day-date">${dateShort}</div>
         <div class="day-workout">${d.desc}</div>
-        <div class="day-km">${d.km} km planif.</div>
-        ${st !== 'pending' ? `
-        <div class="day-actual" onclick="event.stopPropagation()">
-          <input type="number" min="0" max="100" step="0.5" placeholder="${d.km}"
-            value="${actual ?? ''}"
-            onchange="setActual(${wi},${di},parseFloat(this.value)||null)"
-            title="km reales corridos">
-          <label>km reales</label>
-        </div>` : ''}
-        <div class="status-hint">${st==='pending'?'Click para marcar ✓':'Click para cambiar estado'}</div>
+        <div class="day-km">${d.km} km planif.${actual != null ? ` · <span style="color:var(--text)">${actual} km reales</span>` : ''}</div>
+        ${notes ? `<div style="font-size:0.72rem;color:var(--muted);margin-top:5px;font-style:italic">"${notes}"</div>` : ''}
       </div>`;
   }).join('');
   return `<div class="days-grid">${cards}</div>`;
@@ -445,7 +532,6 @@ function renderDaysGrid(wi) {
 function switchStage(i) {
   activeStage = i;
   render();
-  // auto-open current week
   const s = STAGES[i];
   for (let wi = s.weeks[0]; wi <= s.weeks[1]; wi++) {
     if (isCurrentWeek(wi)) { openWeeks.add(wi); break; }
@@ -458,10 +544,60 @@ function toggleWeek(wi) {
   renderWeeks();
 }
 
-function handleDayClick(event, wi, di) {
-  if (event.target.tagName === 'INPUT') return;
-  cycleStatus(wi, di);
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+let modalWi = null, modalDi = null, modalStatus = 'pending';
+
+function openModal(wi, di) {
+  const d = WEEKS[wi].days[di];
+  if (!d) return;
+
+  modalWi = wi; modalDi = di;
+  modalStatus = getStatus(wi, di);
+
+  document.getElementById('modalDayLabel').textContent = DAYS_ES[di] + ' · Semana ' + WEEKS[wi].n;
+  document.getElementById('modalDayDate').textContent = formatDayDate(wi, di);
+  document.getElementById('modalWorkout').textContent = d.desc;
+  document.getElementById('modalKmPlan').textContent = d.km + ' km planificados';
+  document.getElementById('modalKmInput').value = getActual(wi, di) ?? '';
+  document.getElementById('modalKmInput').placeholder = d.km;
+  document.getElementById('modalNotes').value = getNotes(wi, di);
+
+  updateStatusBtns();
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  modalWi = null; modalDi = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function modalSetStatus(s) {
+  modalStatus = s;
+  updateStatusBtns();
+}
+
+function updateStatusBtns() {
+  document.querySelectorAll('.status-btn').forEach(btn => {
+    btn.className = 'status-btn';
+    if (btn.dataset.status === modalStatus) btn.classList.add('active-' + modalStatus);
+  });
+}
+
+function saveModal() {
+  if (modalWi === null) return;
+  const kmVal = parseFloat(document.getElementById('modalKmInput').value) || null;
+  const notes = document.getElementById('modalNotes').value.trim();
+  saveDay(modalWi, modalDi, modalStatus, kmVal, notes);
+  closeModal();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // Find current stage
